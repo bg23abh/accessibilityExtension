@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="popup.css" />
+    <script src="popup.js" defer></script>
+    <title>Accessibility UI</title>
+  </head>
+  <body>
+    <div class="container">
+      <br />
+      <label><b>Font Family</b></label>
+      <select>
+        <option>Arial</option>
+        <option>OpenDyslexic</option>
+        <option>Lexend</option>
+        <option>Comic Sans MS</option>
+        <option>Verdana</option>
+      </select>
+      <br />
+      <br />
+      <label><b>Font Size</b></label>
+      <div class="font-size-control">
+        <button>-</button>
+        <span>100%</span>
+        <button>+</button>
+      </div>
+      <br />
+      <label><b>Color</b></label>
+      <div class="radio-group">
+        <label
+          ><input type="radio" name="color" value="normal" checked />
+          Normal</label
+        >
+        <label
+          ><input type="radio" name="color" value="bw" /> Black & White</label
+        >
+      </div>
+      <br />
+      <label>ADHD Reading Mode</label>
+      <div class="slider-container">
+        <label class="switch">
+            <input type="checkbox" id="bionic-toggle">
+            <span class="slider"></span>
+        </label>
+    </div>
+    </div>
+  </body>
+</html>

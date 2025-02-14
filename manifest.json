@@ -1,0 +1,20 @@
+{
+  "manifest_version": 3,
+  "name": "Neurodiverse Accessibility",
+  "version": "1.0",
+  "description": "Apply accessible fonts to webpages.",
+  "action": {
+    "default_popup": "popup/popup.html"
+  },
+  "permissions": ["storage", "activeTab", "scripting"],
+  "host_permissions": ["<all_urls>"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content-scripts/adjustPage.js"]
+    }
+  ]
+}
