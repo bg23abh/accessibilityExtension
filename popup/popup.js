@@ -4,7 +4,7 @@ document.addEventListener("DOMContentLoaded", function () {
     const fontSizeSpan = document.querySelector(".font-size-control span");
     const fontSelect = document.querySelector("select");
     const colorRadios = document.querySelectorAll("input[name='color']");
-    const adhdToggle = document.querySelector("#adhd-toggle"); // ADHD toggle slider
+    const adhdToggle = document.querySelector("#bionic-toggle"); // ADHD toggle slider
 
     let fontPercentage = 100;
     const minPercentage = 50;
