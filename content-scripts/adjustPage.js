@@ -2,6 +2,7 @@ let fontPercentage = 100; // Default scaling
 const minPercentage = 50;
 const maxPercentage = 150;
 const originalFontSizes = new Map(); // Store the original font sizes for elements
+let originalTextMap = new Map();
 
 function updatePageFontSize(percentage, absolute = false) {
     fontPercentage = absolute ? percentage : fontPercentage + percentage;
@@ -24,29 +25,41 @@ function applyBlackAndWhiteMode(enable) {
     console.log("Black & White Mode:", enable);
 }
 
-function applyADHDReadingMode(enable) {
-    document.querySelectorAll("p, span, div:not([role]), li, a, td, th").forEach(element => {
+function applyBionicReading(enable) {
+    const tags = [...document.querySelectorAll("p, h1, h2, h3, h4, h5, h6")];
+
+    tags.forEach(el => {
+        // Avoid reprocessing already bold elements
         if (enable) {
-            element.childNodes.forEach(child => {
-                if (child.nodeType === 3) { // Text node only
-                    let words = child.nodeValue.split(" ");
-                    let updatedWords = words.map(word => {
-                        if (!word.startsWith("<b>")) { // Ignore already bold words
-                            return `<b>${word.slice(0, 2)}</b>${word.slice(2)}`;
-                        }
-                        return word;
-                    });
-                    let newHTML = updatedWords.join(" ");
-                    let spanWrapper = document.createElement("span");
-                    spanWrapper.innerHTML = newHTML;
-                    element.replaceChild(spanWrapper, child);
-                }
-            });
+            if (!originalTextMap.has(el)) {
+                originalTextMap.set(el, el.innerHTML);
+                el.innerHTML = bionicTransform(el.innerText);
+            }
         } else {
-            element.innerHTML = element.innerHTML.replace(/<b>(\w{2})<\/b>(\w*)/g, "$1$2");
+            if (originalTextMap.has(el)) {
+                el.innerHTML = originalTextMap.get(el);
+                originalTextMap.delete(el);
+            }
         }
     });
-    console.log("ADHD Mode:", enable);
+}
+
+function bionicTransform(text) {
+    return text
+        .split(" ")
+        .map(word => {
+            if (word.length < 1) return word;
+
+            // Preserve punctuation (basic)
+            const match = word.match(/^(\W*)(\w+)(\W*)$/);
+            if (!match) return word;
+
+            const [, prefix, core, suffix] = match;
+            const boldCount = Math.ceil(core.length * 0.4);
+            const bolded = `<b>${core.slice(0, boldCount)}</b>${core.slice(boldCount)}`;
+            return `${prefix}${bolded}${suffix}`;
+        })
+        .join(" ");
 }
 
 // Apply settings on interaction only (not auto-load)
@@ -60,7 +73,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         console.log("Applied font:", message.font);
     } else if (message.action === "toggleBlackWhite") {
         applyBlackAndWhiteMode(message.enable);
-    } else if (message.action === "toggleADHDMode") {
-        applyADHDReadingMode(message.enable);
+    } else if (message.action === "toggleBionicReading") {
+        applyBionicReading(message.enable);
+        console.log("Bionic Reading mode set to:", message.enable);
     }
 });
