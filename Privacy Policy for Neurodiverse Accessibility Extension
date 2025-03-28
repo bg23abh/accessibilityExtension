@@ -1,0 +1,27 @@
+Effective Date: 25 March 2025
+
+This browser extension, Neurodiverse Accessibility Extension, is committed to protecting your privacy. This privacy policy outlines what information is collected and how it is used.
+
+Information Collection and Use
+We do not collect, store, or transmit any personal information. All functionalities provided by the extension — including Bionic Reading Mode, font customization, color contrast adjustments, and text-to-speech — operate entirely within your browser and do not require internet communication or user data collection.
+
+No Personal Data Collection
+No user accounts or login is required.
+
+No cookies or tracking technologies are used.
+
+No browsing activity, content, or inputs are transmitted or saved.
+
+No third-party analytics or advertising services are integrated.
+
+Permissions Used
+The extension uses permissions such as activeTab, scripting, and storage to modify the appearance and content of the current web page based on user preferences. These permissions are strictly required for core functionality and are never used to access or store personal data.
+
+Third-party Services
+This extension does not rely on third-party services that collect or process user data.
+
+Changes to This Policy
+If we decide to change our privacy policy, we will update this document accordingly. Continued use of the extension after changes indicates your acceptance of the new terms.
+
+Contact
+If you have any questions or concerns about this policy, feel free to open an issue on the GitHub repository where this extension is hosted.
