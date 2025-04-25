@@ -11,10 +11,17 @@
   "background": {
     "service_worker": "background.js"
   },
+  "web_accessible_resources": [
+    {
+      "resources": ["content-scripts/bionicWorker.js"],
+      "matches": ["<all_urls>"]
+    }
+  ],
   "content_scripts": [
     {
-      "matches": ["<all_urls>"],
-      "js": ["content-scripts/adjustPage.js"]
+    "matches": ["<all_urls>"],
+    "js": ["content-scripts/adjustPage.js"],
+    "run_at": "document_idle"
     }
   ]
 }
