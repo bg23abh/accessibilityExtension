@@ -4,44 +4,54 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- Linking Lexend font for use inside popup UI -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@100..900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="popup.css" />
-  <script src="popup.js" defer></script>
+  <script src="popup.js"></script>
   <title>Accessibility UI</title>
 </head>
 
 <body>
   <div class="container">
     <br />
+    <!-- Font Family Selection -->
     <label><b>Font Family</b></label>
     <select>
-      <option>Arial</option>
-      <option>OpenDyslexic</option>
-      <option>Lexend</option>
-      <option>Comic Sans MS</option>
-      <option>Verdana</option>
+      <option value="">Default</option>
+      <option value="Arial">Arial</option>
+      <option value="OpenDyslexic">OpenDyslexic</option>
+      <option value="Lexend">Lexend</option>
+      <option value="Comic Sans MS">Comic Sans MS</option>
+      <option value="Verdana">Verdana</option>
     </select>
     <br />
     <br />
     <div>
+      <!-- Font Size Adjustment -->
       <label for="fontSizeSlider">Font Size: <span id="fontSizeValue">100%</span></label>
       <input type="range" id="fontSizeSlider" min="50" max="150" value="100" step="1">
     </div>
     <br />
     <br />
+     <!-- Color Scheme Switch -->
     <label><b>Color</b></label>
     <div class="radio-group">
-      <label><input type="radio" name="color" value="normal" checked />
-        Normal</label>
-      <label><input type="radio" name="color" value="bw" /> Black & White</label>
+      <label><input type="radio" name="color" value="normal" checked />Normal</label>
+      <label><input type="radio" name="color" value="bw" />Black & White</label>
+      <label><input type="radio" name="color" value="dark" />Dark</label>
     </div>
     <br />
     <br />
+    <!-- Toggle for Bionic Reading -->
     <label><b>Bionic Reading Mode </b></label>
     <div class="slider-container">
       <input type="checkbox" id="bionic-toggle" />
     </div>
     <br />
     <br />
+    <!-- Buttons for Text-to-Speech -->
     <label><b>Text to Speech </b></label>
     <br />
      <button id="read-full-btn">🔊 Read Full Page</button>

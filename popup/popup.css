@@ -1,3 +1,8 @@
+html {
+  transition: background-color 0.5s, color 0.5s, filter 0.5s;
+}
+
+/* Set basic styles for popup body - center the container and set background */
 body {
   font-family: Arial, sans-serif;
   display: flex;
@@ -8,15 +13,17 @@ body {
   margin: 0;
 }
 
+/* Styling the container box inside popup */
 .container {
   background: white;
   padding: 20px;
   width: 300px;
   border-radius: 10px;
-  /*box-shadow: 5px 5px 10px rgba(0, 0, 0, 0.2); */
 }
 
-select, button {
+/* Style for select dropdown and general button appearance */
+select,
+button {
   width: 100%;
   padding: 8px;
   margin: 5px 0;
@@ -26,12 +33,14 @@ select, button {
   font-size: 14px;
 }
 
+/* Layout control for font size elements */
 .font-size-control {
   display: flex;
   align-items: center;
   justify-content: space-between;
 }
 
+/* Specific sizing for font size increase/decrease buttons */
 .font-size-control button {
   width: 30px;
   height: 30px;
@@ -39,21 +48,23 @@ select, button {
   display: flex;
   align-items: center;
   justify-content: center;
-
 }
 
+/* Group radio buttons horizontally */
 .radio-group {
   display: flex;
   gap: 10px;
   margin: 10px 0;
 }
 
+/* Style for each label next to radio button */
 .radio-group label {
   display: flex;
   align-items: center;
   gap: 5px;
 }
 
+/* Style basic radio button circle */
 input[type="radio"] {
   appearance: none;
   width: 20px;
@@ -65,6 +76,7 @@ input[type="radio"] {
   justify-content: center;
 }
 
+/* Inner filled circle effect when radio is checked */
 input[type="radio"]:checked::before {
   content: "";
   width: 10px;
@@ -72,9 +84,10 @@ input[type="radio"]:checked::before {
   background: black;
   border-radius: 50%;
   display: block;
-
 }
 
+/* Change border color when radio is selected */
 input[type="radio"]:checked {
   border-color: black;
 }
+

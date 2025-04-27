@@ -1,29 +1,34 @@
-let fontPercentage = 100; // Default scaling
+// Notify background script to clear any previously stored tab settings
+chrome.runtime.sendMessage({ action: "clearTabSettings" });
+
+// Default font scaling settings
+let fontPercentage = 100;
 const minPercentage = 50;
 const maxPercentage = 150;
+
+// Maps to store original element properties
 const originalFontSizes = new Map(); // Store the original font sizes for elements
 let originalTextMap = new Map();
 let readSelectionEnabled = false;
 let readFullPageEnabled = false;
 
-
 document
-    .querySelectorAll("*:not(script, style, meta, link, title, head)")
-    .forEach((element) => {
-      if (!originalFontSizes.has(element)) {
-        originalFontSizes.set(
-          element,
-          parseFloat(window.getComputedStyle(element).fontSize)
-        );
-      }
-    });
+  .querySelectorAll("*:not(script, style, meta, link, title, head)")
+  .forEach((element) => {
+    if (!originalFontSizes.has(element)) {
+      originalFontSizes.set(
+        element,
+        parseFloat(window.getComputedStyle(element).fontSize)
+      );
+    }
+  });
 
-
-
+// Request animation frame for smooth DOM updates without blocking
 function handleDomChanges(functionToCall) {
   requestAnimationFrame(functionToCall);
 }
 
+// Function to update page font size
 function updatePageFontSize(percentage, absolute = false) {
   fontPercentage = absolute ? percentage : fontPercentage + percentage;
   fontPercentage = Math.max(
@@ -33,107 +38,133 @@ function updatePageFontSize(percentage, absolute = false) {
 
   handleDomChanges(() => {
     document
-    .querySelectorAll("*:not(script, style, meta, link, title, head)")
-    .forEach((element) => {
-      // if (!originalFontSizes.has(element)) {
-      //   originalFontSizes.set(
-      //     element,
-      //     parseFloat(window.getComputedStyle(element).fontSize)
-      //   );
-      // }
-      let baseSize = originalFontSizes.get(element);
-      let newSize = (baseSize * fontPercentage) / 100;
-      element.style.fontSize = newSize + "px";
-    });
+      .querySelectorAll("*:not(script, style, meta, link, title, head)")
+      .forEach((element) => {
+        let baseSize = originalFontSizes.get(element);
+        let newSize = (baseSize * fontPercentage) / 100;
+        element.style.fontSize = newSize + "px";
+      });
 
-  console.log("Updated font size to:", fontPercentage + "%");
-  })
+    console.log("Updated font size to:", fontPercentage + "%");
+  });
 }
 
-function applyBlackAndWhiteMode(enable) {
-  handleDomChanges(() => document.documentElement.style.filter = enable ? "grayscale(100%)" : "none");
-  
-  console.log("Black & White Mode:", enable);
+// Function to apply Black and White mode
+// function applyBlackAndWhiteMode(enable) {
+//   handleDomChanges(
+//     () =>
+//       (document.documentElement.style.filter = enable
+//         ? "grayscale(100%)"
+//         : "none")
+//   );
+
+//   console.log("Black & White Mode:", enable);
+// }
+
+// Function to apply color modes: Normal, Black & White, Dark
+function applyColorMode(mode) {
+  handleDomChanges(() => {
+    if (mode === "normal") {
+      document.documentElement.style.filter = "none";
+      document.body.style.backgroundColor = "";
+      document.body.style.color = "";
+      document.querySelectorAll("*").forEach(el => {
+        el.style.backgroundColor = "";
+        el.style.color = "";
+      });
+    } else if (mode === "bw") {
+      document.documentElement.style.filter = "grayscale(100%)";
+      document.body.style.backgroundColor = "";
+      document.body.style.color = "";
+      document.querySelectorAll("*").forEach(el => {
+        el.style.backgroundColor = "";
+        el.style.color = "";
+      });
+    } else if (mode === "dark") {
+      document.documentElement.style.filter = "none";
+      document.body.style.backgroundColor = "#121212";
+      document.body.style.color = "#e0e0e0";
+      document.querySelectorAll("*").forEach(el => {
+        el.style.backgroundColor = "#121212";
+        el.style.color = "#e0e0e0";
+        el.style.filter = "none"; // // light text
+      });
+    }
+    console.log("Applied color mode:", mode);
+  });
 }
 
+
+// Function to apply Bionic Reading Mode
 function applyBionicReading(enable) {
-
-  const tags = [...document.querySelectorAll("p")];
-  const startTime = new Date().getTime();
+  const paragraphs = [...document.querySelectorAll("p")];
 
   if (enable) {
-    // Process elements in batches
-    processInBatches(tags, (el, done) => {
-      if (!originalTextMap.has(el)) {
-        originalTextMap.set(el, el.innerHTML);
-        bionicTransformAsync(el.innerText, (transformed) => {
-          el.innerHTML = transformed;
-          done(() => {
-            console.log("Transformed");
-          }); // Mark this element as processed
-        });
-      } else {
-        done(() => {
-          console.log("Skipped");
-        }); // Skip already processed elements
+    processParagraphsInBatches(paragraphs, (p, done) => {
+      if (!p.getAttribute("data-bionic-applied")) {
+        walkAndBoldTextNodes(p);
+        p.setAttribute("data-bionic-applied", "true");
       }
-    }, () => {
-      const endTime = new Date().getTime();
-      console.log("Bionic Reading applied");
-      console.log(`Time taken ${endTime - startTime}ms`);
+      done();
     });
   } else {
-    // Revert elements in batches
-    processInBatches(tags, (el, done) => {
-      if (originalTextMap.has(el)) {
-        el.innerHTML = originalTextMap.get(el);
-        originalTextMap.delete(el);
+    processParagraphsInBatches(paragraphs, (p, done) => {
+      if (p.getAttribute("data-bionic-applied")) {
+        p.innerHTML = p.getAttribute("data-original-html");
+        p.removeAttribute("data-original-html");
+        p.removeAttribute("data-bionic-applied");
       }
-      done(() => {
-        console.log("Reverted");
-        
-      }); // Mark this element as processed
-    }, () => {
-      const endTime = new Date().getTime();
-      console.log("Bionic Reading reverted");
-      console.log(`Time taken ${endTime - startTime}ms`);
+      done();
     });
   }
-
-  // const tags = [...document.querySelectorAll("p, h1, h2, h3, h4, h5, h6")];
-
-  // const startTime = new Date().getTime();
-
-  // handleDomChanges(() => {
-  //   tags.forEach((el) => {
-  //     // Avoid reprocessing already bold elements
-  //     if (enable) {
-  //       if (!originalTextMap.has(el)) {
-  //         originalTextMap.set(el, el.innerHTML);
-  //         bionicTransformAsync(el.innerText, (transformed) => {
-  //           console.log("Using web worker");
-            
-  //           el.innerHTML = transformed;
-  //         });
-  //         // el.innerHTML = bionicTransform(el.innerText);
-  //       }
-  //     } else {
-  //       if (originalTextMap.has(el)) {
-  //         el.innerHTML = originalTextMap.get(el);
-  //         originalTextMap.delete(el);
-  //       }
-  //     }
-  //   });
-  //   const endTime = new Date().getTime();
-  //   console.log("Done")
-  //   console.log(`Time taken ${endTime - startTime}ms`);
-    
-  // })
 }
 
-// Helper function to process elements in batches
-function processInBatches(elements, processElement, onComplete) {
-  const batchSize = 200; // Number of elements to process per frame
+// Helper: Bold first 40% of each word inside text nodes
+function walkAndBoldTextNodes(element) {
+  if (!element.getAttribute("data-original-html")) {
+    element.setAttribute("data-original-html", element.innerHTML);
+  }
+
+  const walker = document.createTreeWalker(
+    element,
+    NodeFilter.SHOW_TEXT,
+    null,
+    false
+  );
+
+  let node;
+  const nodesToProcess = [];
+
+  while ((node = walker.nextNode())) {
+    nodesToProcess.push(node);
+  }
+
+  nodesToProcess.forEach((node) => {
+    const parent = node.parentNode;
+    const text = node.textContent.trim();
+    if (text.length > 0) {
+      const html = text
+        .split(/\s+/)
+        .map((word) => {
+          if (word.length < 1) return word;
+          const boldLength = Math.ceil(word.length * 0.4);
+          const bolded = `<b>${word.slice(0, boldLength)}</b>${word.slice(
+            boldLength
+          )}`;
+          return bolded;
+        })
+        .join(" ");
+
+      const tempSpan = document.createElement("span");
+      tempSpan.innerHTML = html;
+      parent.replaceChild(tempSpan, node);
+    }
+  });
+}
+
+// Helper: Process paragraphs in small batches
+function processParagraphsInBatches(elements, processElement, onComplete) {
+  const batchSize = 50;
   let index = 0;
 
   function processNextBatch() {
@@ -144,69 +175,62 @@ function processInBatches(elements, processElement, onComplete) {
       processElement(el, () => {
         processedCount++;
         if (processedCount === batch.length) {
-          // All elements in this batch are processed
           if (index + batchSize < elements.length) {
             index += batchSize;
-            requestAnimationFrame(processNextBatch); // Process the next batch
-            onComplete();
+            requestAnimationFrame(processNextBatch);
           } else {
-            onComplete(); // All elements are processed
+            if (onComplete) onComplete();
           }
         }
       });
     });
+
+    if (batch.length === 0 && onComplete) {
+      onComplete();
+    }
   }
 
-  processNextBatch(); // Start processing the first batch
+  processNextBatch();
 }
 
 function bionicTransformAsync(text, callback) {
-
+  // Dynamically create and use a Web Worker from internal script to offload bionic reading processing
   fetch(chrome.runtime.getURL("content-scripts/bionicWorker.js"))
-  .then((response) => {
-    if (!response.ok) {
-      throw new Error(`Failed to fetch worker script: ${response.statusText}`);
-    }
-    return response.text();
-  }).then((workerScript) => {
-    // Create a Blob from the worker script
-    const blob = new Blob([workerScript], { type: "application/javascript" });
-    const blobUrl = URL.createObjectURL(blob);
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error(
+          `Failed to fetch worker script: ${response.statusText}`
+        );
+      }
+      return response.text();
+    })
+    .then((workerScript) => {
+      // Create a Blob from the worker script
+      const blob = new Blob([workerScript], { type: "application/javascript" });
+      const blobUrl = URL.createObjectURL(blob);
 
-    // Create the worker from the Blob URL
-    const worker = new Worker(blobUrl);
+      // Create the worker from the Blob URL
+      const worker = new Worker(blobUrl);
 
-    function handleWorkerMessage(callback) {
-      callback();
-      worker.terminate();
-      URL.revokeObjectURL(blobUrl);
-    }
-    worker.onmessage = (e) => {
-      handleWorkerMessage(() => callback(e.data));
-    }
+      function handleWorkerMessage(callback) {
+        callback();
+        worker.terminate();
+        URL.revokeObjectURL(blobUrl);
+      }
+      worker.onmessage = (e) => {
+        handleWorkerMessage(() => callback(e.data));
+      };
 
-    worker.onerror = (e) => {
-      handleWorkerMessage(() => console.error("Error in worker:", e.message));
-    }
+      worker.onerror = (e) => {
+        handleWorkerMessage(() => console.error("Error in worker:", e.message));
+      };
 
-    // worker.onmessage = (e) => {
-    //   callback(e.data);
-    //   worker.terminate();
-    //   URL.revokeObjectURL(blobUrl);
-    // };
-
-    // worker.onerror = (e) => {
-    //   worker.terminate();
-    //   URL.revokeObjectURL(blobUrl);
-    // };
-
-    console.log("Posting message to worker...");
-    worker.postMessage(text);
-  })
-  .catch((error) => {
-    console.error("Error loading worker script:", error);
-  });
-
+      console.log("Posting message to worker...");
+      worker.postMessage(text);
+    })
+    .catch((error) => {
+      console.error("Error loading worker script:", error);
+    });
 }
 
 function bionicTransform(text) {
@@ -247,34 +271,103 @@ function readWholePage() {
   speakText(fullText);
 }
 const utterance = new SpeechSynthesisUtterance("");
-utterance.rate = 1
+utterance.rate = 1;
 
 // Speak function
 function speakText(text) {
   window.speechSynthesis.cancel(); // Stop any existing speech
-  utterance = {
-    ...utterance,
-    text
-  }
+  utterance.text = text;
   window.speechSynthesis.speak(utterance);
 }
 
-// Apply settings on interaction only (not auto-load)
+chrome.storage.local.get(
+  ["fontSize", "font", "blackWhiteMode", "bionicReadingMode"],
+  (res) => {}
+);
+
+// Listen for messages from popup.js
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  // Apply selected font size to page
   if (message.action === "applyFontSize") {
     updatePageFontSize(message.percentage, true);
-  } else if (message.action === "applyFont") {
+    // Save updated setting to Chrome storage after applying it
+    chrome.storage.sync.set({
+      ...chrome.storage.sync.get("settings"),
+      fontSize: message.percentage,
+    });
+  }
+  // Apply selected typeface to page
+  else if (message.action === "applyFont") {
+    const fontName = message.font;
+    // If Lexend font selected, dynamically inject Lexend link into page head
+    if (fontName === "Lexend") {
+      if (!document.getElementById("lexend-font-link")) {
+        const link = document.createElement("link");
+        link.id = "lexend-font-link";
+        link.rel = "stylesheet";
+        link.href =
+          "https://fonts.googleapis.com/css2?family=Lexend:wght@100..900&display=swap";
+        document.head.appendChild(link);
+      }
+    }
+
+    // If OpenDyslexic font selected, dynamically inject font-face CSS
+    //not working as the url is not giving access to the font
+    if (fontName === "OpenDyslexic") {
+      if (!document.getElementById("opendyslexic-style")) {
+        const style = document.createElement("style");
+        style.id = "opendyslexic-style";
+        style.textContent = `
+          @font-face {
+            font-family: 'OpenDyslexic';
+            src: url('https://cdn.jsdelivr.net/gh/antijingoist/opendyslexic/opendyslexic-regular.otf') format('opentype');
+            font-style: normal;
+            font-weight: normal;
+          }
+        `;
+        document.head.appendChild(style);
+      }
+    }
+
+    // Apply selected font-family to all page elements
     document
       .querySelectorAll("*:not(script, style, meta, link, title, head)")
       .forEach((element) => {
-        element.style.fontFamily = message.font + ", sans-serif";
+        if (fontName) {
+          element.style.setProperty(
+            "font-family",
+            `"${fontName}", sans-serif`,
+            "important"
+          );
+        } else {
+          element.style.removeProperty("font-family");
+        }
       });
+
+    console.log("Applied font:", fontName);
+
+    chrome.storage.sync.set({
+      ...chrome.storage.sync.get("settings"),
+      font: message.font,
+    });
     console.log("Applied font:", message.font);
-  } else if (message.action === "toggleBlackWhite") {
-    applyBlackAndWhiteMode(message.enable);
-  } else if (message.action === "toggleBionicReading") {
+  }
+  // Apply Black & White color mode
+  else if (message.action === "toggleColorMode") {
+    applyColorMode(message.mode);
+  chrome.storage.sync.set({
+    ...chrome.storage.sync.get("settings"),
+    colorMode: message.mode,
+  });
+  }
+  // Toggle Bionic Reading Mode
+  else if (message.action === "toggleBionicReading") {
     applyBionicReading(message.enable);
     sendResponse({ success: true });
+    chrome.storage.sync.set({
+      ...chrome.storage.sync.get("settings"),
+      bionicReadingMode: message.enable,
+    });
     console.log("Bionic Reading mode set to:", message.enable);
   } else if (message.action === "toggleFullPageRead") {
     readFullPageEnabled = message.enable;

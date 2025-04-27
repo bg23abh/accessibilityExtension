@@ -1,3 +1,33 @@
+// Initialize a flag to identify first load
+let firstLoad = true;
+
+// Restore saved settings for the popup when opened
+function restoreSettings() {
+  const fontSizeSlider = document.getElementById("fontSizeSlider");
+  const fontSizeValue = document.getElementById("fontSizeValue");
+  const fontSelect = document.querySelector("select");
+  const colorRadios = document.querySelectorAll("input[name='color']");
+  const bionicToggle = document.querySelector("#bionic-toggle");
+
+  // Query the current active tab to send message or inject scripts
+  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+    const tabId = tabs[0].id;
+
+    chrome.storage.local.get(`tab_${tabId}_applied`, (data) => {
+      const isApplied = data[`tab_${tabId}_applied`];
+
+      if (!isApplied) {
+        resetPopupToDefaults(); // Reset popup if no settings applied
+      } else {
+        continueRestoreSettings(); // Restore saved settings
+      }
+    });
+  });
+
+  firstLoad = false;
+}
+
+// Wait for DOM content to load
 document.addEventListener("DOMContentLoaded", function () {
   const fontSizeSlider = document.getElementById("fontSizeSlider");
   const fontSizeValue = document.getElementById("fontSizeValue");
@@ -9,44 +39,49 @@ document.addEventListener("DOMContentLoaded", function () {
   const minPercentage = 50;
   const maxPercentage = 150;
 
-  // Update label
+  // Log to verify popup has loaded
+  console.log("Popup loaded");
+
+  restoreSettings(); // Restore settings when popup loads
+
+  // Font size slider change handler
   fontSizeSlider.addEventListener("input", () => {
     const value = parseInt(fontSizeSlider.value);
     fontSizeValue.textContent = value + "%";
 
-    chrome.storage.sync.set({ fontPercentage: value });
+    chrome.storage.sync.get("settings", (data) => {
+      const settings = data.settings || {};
+      settings.fontPercentage = value;
+      chrome.storage.sync.set({ settings });
+    });
 
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
       chrome.tabs.sendMessage(tabs[0].id, {
         action: "applyFontSize",
         percentage: value,
       });
+      chrome.storage.local.set({ [`tab_${tabs[0].id}_applied`]: true });
     });
   });
 
+  // Font selection change handler
   fontSelect.addEventListener("change", function () {
     const selectedFont = fontSelect.value;
     chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
       chrome.tabs.sendMessage(tabs[0].id, {
         action: "applyFont",
-        font: selectedFont,
+        font: selectedFont || null,
       });
+      chrome.storage.local.set({ [`tab_${tabs[0].id}_applied`]: true });
     });
     chrome.storage.sync.get("settings", (data) => {
       const settings = data.settings || {};
       settings.fontFamily = selectedFont;
-
       chrome.storage.sync.set({ settings });
-    });
-
-    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-      chrome.tabs.sendMessage(tabs[0].id, {
-        action: "applyFont",
-        font: selectedFont,
-      });
     });
   });
 
+  // Color mode radio change handler
   colorRadios.forEach((radio) => {
     radio.addEventListener("change", function () {
       const selectedColor = document.querySelector(
@@ -56,42 +91,40 @@ document.addEventListener("DOMContentLoaded", function () {
 
       chrome.storage.sync.get("settings", (data) => {
         const settings = data.settings || {};
-        settings.blackWhiteMode = enableBW;
-
+        settings.colorMode = selectedColor;
         chrome.storage.sync.set({ settings });
       });
 
       chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
         chrome.tabs.sendMessage(tabs[0].id, {
-          action: "toggleBlackWhite",
-          enable: enableBW,
+          action: "toggleColorMode",
+          mode: selectedColor,
         });
+        chrome.storage.local.set({ [`tab_${tabs[0].id}_applied`]: true });
       });
     });
   });
 
+  // Bionic reading toggle handler
   bionicToggle.addEventListener("change", function () {
     const enableBionic = bionicToggle.checked;
 
     chrome.storage.sync.get("settings", (data) => {
       const settings = data.settings || {};
       settings.bionicReading = enableBionic;
-
       chrome.storage.sync.set({ settings });
     });
-    console.log("Bionic Reading mode set to:", enableBionic);
-    
 
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
       chrome.tabs.sendMessage(tabs[0].id, {
         action: "toggleBionicReading",
         enable: enableBionic,
-      }).then((res) => {
-        console.log(res);
       });
+      chrome.storage.local.set({ [`tab_${tabs[0].id}_applied`]: true });
     });
   });
 
+  // Full page read button handler
   document.getElementById("read-full-btn").addEventListener("click", () => {
     chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
       chrome.scripting.executeScript(
@@ -116,6 +149,7 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   });
 
+  // Selected text read button handler
   document.getElementById("read-selected-btn").addEventListener("click", () => {
     chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
       chrome.scripting.executeScript(
@@ -140,74 +174,72 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   });
 
+  // Stop speech button handler
   document.getElementById("stop-speech-btn").addEventListener("click", () => {
     chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
       chrome.scripting.executeScript({
         target: { tabId: tabs[0].id },
         func: () => {
           if (speechSynthesis.speaking) {
-            speechSynthesis.cancel(); // Stops speech immediately
+            speechSynthesis.cancel();
           }
         },
       });
     });
   });
+});
 
-  updateFontSizeDisplay();
+// Reset popup fields to default state
+function resetPopupToDefaults() {
+  const fontSelect = document.querySelector("select");
+  const fontSizeSlider = document.getElementById("fontSizeSlider");
+  const fontSizeValue = document.getElementById("fontSizeValue");
+  const colorRadios = document.querySelectorAll("input[name='color']");
+  const bionicToggle = document.querySelector("#bionic-toggle");
 
+  fontSelect.value = ""; // Default option selected
+  fontSizeSlider.value = 100;
+  fontSizeValue.textContent = "100%";
+  colorRadios.forEach((radio) => {
+    if (radio.value === "normal") {
+      radio.checked = true;
+    }
+  });
+  bionicToggle.checked = false;
+}
+
+// Continue restoring previously saved user settings
+function continueRestoreSettings() {
+  // Restore previously saved font family, font size, color mode, and bionic reading toggle
   chrome.storage.sync.get("settings", (data) => {
     const settings = data.settings || {};
-
-    // Restore Font Family
     const fontSelect = document.querySelector("select");
-    if (settings.fontFamily) {
-      fontSelect.value = settings.fontFamily;
-    }
-
-    // Restore Font Size
-    const fontSizeSpan = document.querySelector(".font-size-control span");
-    const fontPercentage = settings.fontPercentage || 100;
-    fontSizeSpan.textContent = fontPercentage + "%";
-
-    // Restore Black & White
-    if (settings.blackWhiteMode !== undefined) {
-      const bwOption = document.querySelector(
-        "input[name='color'][value='bw']"
-      );
-      const normalOption = document.querySelector(
-        "input[name='color'][value='normal']"
-      );
-      if (settings.blackWhiteMode && bwOption) bwOption.checked = true;
-      else if (normalOption) normalOption.checked = true;
-    }
-
-    // Restore Bionic Toggle
+    const fontSizeSlider = document.getElementById("fontSizeSlider");
+    const fontSizeValue = document.getElementById("fontSizeValue");
+    const colorRadios = document.querySelectorAll("input[name='color']");
     const bionicToggle = document.querySelector("#bionic-toggle");
+
+    if (settings.fontFamily) fontSelect.value = settings.fontFamily;
+    const fontPercentage = settings.fontPercentage || 100;
+    fontSizeSlider.value = fontPercentage;
+    fontSizeValue.textContent = fontPercentage + "%";
+
+    if (settings.colorMode !== undefined) {
+      const normalOption = document.querySelector("input[value='normal']");
+      const bwOption = document.querySelector("input[value='bw']");
+      const darkOption = document.querySelector("input[value='dark']");
+
+      if (settings.colorMode === "normal" && normalOption) {
+        normalOption.checked = true;
+      } else if (settings.colorMode === "bw" && bwOption) {
+        bwOption.checked = true;
+      } else if (settings.colorMode === "dark" && darkOption) {
+        darkOption.checked = true;
+      }
+    }
+
     if (bionicToggle) {
       bionicToggle.checked = settings.bionicReading || false;
     }
-
-    // OPTIONAL: Re-send settings to content script
-    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-      chrome.tabs.sendMessage(tabs[0].id, {
-        action: "applyFont",
-        font: settings.fontFamily || "Arial",
-        percentage: fontPercentage,
-      });
-
-      chrome.tabs.sendMessage(tabs[0].id, {
-        action: "toggleBlackWhite",
-        enable: settings.blackWhiteMode || false,
-      });
-
-      chrome.tabs.sendMessage(tabs[0].id, {
-        action: "toggleBionicReading",
-        enable: settings.bionicReading || false,
-      })
-      chrome.tabs.sendMessage(tabs[0].id, {
-        action: "toggleADHDMode",
-        enable: settings.adhdMode || false,
-      });
-    });
   });
-});
+}
